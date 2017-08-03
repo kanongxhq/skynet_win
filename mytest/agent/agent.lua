@@ -13,21 +13,23 @@ local REQUEST = {}
 local client_fd
 
 function REQUEST:get()
-	print("get", self.what)
+	skynet.error("agent get: " .. self.what)
 	local r = skynet.call("SIMPLEDB", "lua", "get", self.what)
 	return { result = r }
 end
 
 function REQUEST:set()
-	print("set", self.what, self.value)
+	skynet.error("agent set: " .. self.what,self.value)
 	local r = skynet.call("SIMPLEDB", "lua", "set", self.what, self.value)
 end
 
 function REQUEST:handshake()
+	skynet.error("agent handshake")
 	return { msg = "Welcome to skynet, I will send heartbeat every 5 sec." }
 end
 
 function REQUEST:quit()
+	skynet.error("agent quit")
 	skynet.call(WATCHDOG, "lua", "close", client_fd)
 end
 
@@ -68,6 +70,7 @@ skynet.register_protocol {
 }
 
 function CMD.start(conf)
+	skynet.error("agent start")
 	local fd = conf.client
 	local gate = conf.gate
 	WATCHDOG = conf.watchdog
@@ -86,6 +89,7 @@ function CMD.start(conf)
 end
 
 function CMD.disconnect()
+	skynet.error("agent disconnect")
 	-- todo: do something before exit
 	skynet.exit()
 end
