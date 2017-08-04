@@ -20,6 +20,7 @@ cpath       = root .."cservice/?.so"
 lua_cpath   = root .."luaclib/?.so"                     		-- windows端将cjson集成到源码
 
 lua_path    = root .."lualib/?.lua;"
+lua_path    = approot .."?.lua;"..lua_path
 
 
 

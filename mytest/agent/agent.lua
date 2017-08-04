@@ -5,27 +5,29 @@ local sproto = require "sproto"
 local sprotoloader = require "sprotoloader"
 
 local WATCHDOG
-local host
-local send_request
+local cjson = require "cjson"
+local proto = require "proto.proto"
+local utils = require "utils.utils"
 
 local CMD = {}
 local REQUEST = {}
 local client_fd
 
-function REQUEST:get()
-	skynet.error("agent get: " .. self.what)
-	local r = skynet.call("SIMPLEDB", "lua", "get", self.what)
-	return { result = r }
-end
-
-function REQUEST:set()
-	skynet.error("agent set: " .. self.what,self.value)
-	local r = skynet.call("SIMPLEDB", "lua", "set", self.what, self.value)
+local function send_package(pack)
+	local json = cjson.encode(pack)
+	local package = string.pack(">s2", json)
+	socket.write(client_fd, package)
 end
 
 function REQUEST:handshake()
 	skynet.error("agent handshake")
-	return { msg = "Welcome to skynet, I will send heartbeat every 5 sec." }
+	skynet.fork(function()
+		while true do
+			send_package({cmd = proto.s2c["handshake"]})
+			skynet.sleep(500)
+		end
+	end)
+	return {cmd = proto.s2c["chat"], msg = "Welcome to skynet, I will send heartbeat every 5 sec." }
 end
 
 function REQUEST:quit()
@@ -33,39 +35,59 @@ function REQUEST:quit()
 	skynet.call(WATCHDOG, "lua", "close", client_fd)
 end
 
-local function request(name, args, response)
-	local f = assert(REQUEST[name])
-	local r = f(args)
-	if response then
-		return response(r)
+function REQUEST:login()
+	skynet.error("agent login")
+	return {cmd = proto.s2c["loginresp"], msg = "success" }
+end
+
+function REQUEST:logout()
+	skynet.error("agent logout")
+	return {cmd = proto.s2c["logoutresp"], msg = "success" }
+end
+
+function REQUEST:chat(data)
+	skynet.error("agent chat",data)
+	--skynet.call(WATCHDOG, "lua", "close", client_fd)
+	return {cmd = proto.s2c["chat"], msg = data}
+end
+
+
+
+local function recv_data(tbData)
+	if tbData and tbData.cmd then
+			local cmdName = proto.c2s[tbData.cmd] 
+			if cmdName then
+				skynet.error("support client request",cmdName)
+				local f = REQUEST[cmdName]
+				if f then
+					local response = f(tbData)
+					if response then
+						send_package(response)
+					end
+				else
+					skynet.error("unsupport client request function")
+				end
+				
+			else
+				skynet.error("unsupport client request",tbData.cmd)
+			end
+	else
+		skynet.error("client data error")
 	end
 end
 
-local function send_package(pack)
-	local package = string.pack(">s2", pack)
-	socket.write(client_fd, package)
-end
-
+-- 对已分包数据进行解包
 skynet.register_protocol {
 	name = "client",
 	id = skynet.PTYPE_CLIENT,
 	unpack = function (msg, sz)
-		return host:dispatch(msg, sz)
+		-- 解包
+		local json = skynet.tostring(msg,sz) 
+		return cjson.decode(json)
 	end,
-	dispatch = function (_, _, type, ...)
-		if type == "REQUEST" then
-			local ok, result  = pcall(request, ...)
-			if ok then
-				if result then
-					send_package(result)
-				end
-			else
-				skynet.error(result)
-			end
-		else
-			assert(type == "RESPONSE")
-			error "This example doesn't support request client"
-		end
+	dispatch = function(_, _,tbData,...)
+		--分发协议数据
+		recv_data(tbData)
 	end
 }
 
@@ -74,16 +96,6 @@ function CMD.start(conf)
 	local fd = conf.client
 	local gate = conf.gate
 	WATCHDOG = conf.watchdog
-	-- slot 1,2 set at main.lua
-	host = sprotoloader.load(1):host "package"
-	send_request = host:attach(sprotoloader.load(2))
-	skynet.fork(function()
-		while true do
-			send_package(send_request "heartbeat")
-			skynet.sleep(500)
-		end
-	end)
-
 	client_fd = fd
 	skynet.call(gate, "lua", "forward", fd)
 end
