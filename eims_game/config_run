@@ -1,0 +1,66 @@
+root        = "./"
+approot     ="../eims_game/"
+thread      = 8
+harbor      = 0
+logger      = nil
+logpath     = "."
+start       = "main"                                    		--由luaservice指定
+bootstrap   = "snlua bootstrap"
+profile     = false
+lualoader   = root .."lualib/loader.lua"
+luaservice  = root .."service/?.lua;"
+cpath       = root .."cservice/?.so"
+lua_cpath   = root .."luaclib/?.so"                     		-- windows端将cjson集成到源码
+
+lua_path    = root .."lualib/?.lua;"
+lua_path    = approot.."shared/?.lua;"..lua_path   	    		---初始共享的类
+lua_path    = approot.."hallmgr/?.lua;"..lua_path   			---大厅的功能类
+lua_path  	= approot.."playerbaseinfo/?.lua;"..lua_path    	---玩家基础信息管理服务
+lua_path  	= approot.."appmgr/?.lua;"..lua_path      			---游戏具体服务管理器
+lua_path  	= approot.."app/?.lua;"..approot.."app/msg_handler/?.lua;"..lua_path   		---游戏具体服务器类
+lua_path    = approot.."areamgr/?.lua;"..lua_path  	            ---游戏具体的游戏类型类
+lua_path    = approot.."area/?.lua;"..lua_path  	            ---具体的游戏类
+lua_path    = approot.."roommgr/?.lua;"..lua_path  	            ---房间管理类
+
+luaservice  = approot.."?.lua;"..luaservice             		-- 启动自己的主节点main.lua
+luaservice  = approot.."login/?.lua;"..luaservice       		---登录
+luaservice  = approot.."opcache/?.lua;"..luaservice     		---mysql && redis
+luaservice  = approot.."hallmgr/?.lua;"..luaservice     		---hall大厅服务器
+luaservice  = approot.."playerbaseinfo/?.lua;"..luaservice      ---玩家基础信息管理服务
+luaservice  = approot.."appmgr/?.lua;"..luaservice      		---游戏具体服务管理器
+luaservice  = approot.."app/?.lua;"..approot.."app/msg_handler/?.lua;"..luaservice  	---游戏具体服务器类
+luaservice  = approot.."areamgr/?.lua;"..luaservice  	        ---具体的游戏管理类
+luaservice  = approot.."area/?.lua;"..luaservice  	            ---具体的游戏类
+luaservice  = approot.."roommgr/?.lua;"..luaservice  	        ---房间管理类
+
+
+---     lua_path 和 luaservice 的区别：
+---     lua_path 是加入pack_path
+---     luaservice 是 skynet锁需要的服务路径
+
+-------main  config
+debug_console_port                              = 6001
+httplisten_port                                 = 6002
+hallstar_port                                   = 6003
+
+
+
+--------mysql config
+mysql_host                                     = "127.0.0.1"
+mysql_port                                     = 3306
+mysql_database                                 = "eimsgame"
+mysql_user                                     = "root"
+mysql_password                                 = "111111"
+
+
+
+---playerbaseinfo config
+
+agentpool_min_size                              = 20
+precreate_check_interval                        = 1              ----检查间隔
+check_idle_accumulated                          = 0
+persistent_accumulated                          = 0
+recycle_accumulated                             = 0
+agent_checkidle_interval                        = 60
+
+
